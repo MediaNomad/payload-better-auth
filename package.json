@@ -56,10 +56,14 @@
   "keywords": [
     "payload",
     "payloadcms",
+    "payload-plugin",
     "better-auth",
     "authentication",
     "adapter"
   ],
+  "engines": {
+    "node": "^18.20.2 || >=20.9.0"
+  },
   "author": "Delmare Digital",
   "license": "MIT",
   "repository": {
