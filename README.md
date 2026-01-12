@@ -19,12 +19,12 @@ Better Auth adapter and plugins for Payload CMS. Enables seamless integration be
 
 ### Requirements
 
-| Dependency | Version |
-|------------|---------|
-| `better-auth` | >= 1.0.0 |
-| `payload` | >= 3.0.0 |
-| `next` | >= 15.4.0 |
-| `react` | >= 18.0.0 |
+| Dependency | Version | Latest |
+|------------|---------|--------|
+| `better-auth` | >= 1.4.0 | 1.4.11 |
+| `payload` | >= 3.0.0 | 3.70.0 |
+| `next` | >= 15.5.9 | 16.1.1 |
+| `react` | >= 18.0.0 | 19.2.3 |
 
 ### Install
 
