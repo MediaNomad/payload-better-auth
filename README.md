@@ -44,6 +44,8 @@ Better Auth requires these environment variables:
 ```bash
 # Required
 BETTER_AUTH_SECRET=your-secret-key-min-32-chars  # Must be at least 32 characters
+
+# Optional - only needed if not using the getBaseUrl() helper below
 BETTER_AUTH_URL=http://localhost:3000            # Your app's base URL
 
 # OAuth Providers (if using social login)
@@ -55,8 +57,28 @@ GOOGLE_CLIENT_SECRET=...
 **Notes:**
 - `BETTER_AUTH_SECRET` is used for signing sessions and tokens - use a secure random string
 - `BETTER_AUTH_URL` tells Better Auth where it's hosted - plugins like passkey derive their config from this
-- For production, set `BETTER_AUTH_URL` to your actual domain (e.g., `https://yourdomain.com`)
 - WebAuthn (passkeys) requires HTTPS in production but works on `localhost` for development
+
+**Vercel Deployment:**
+
+For seamless support of Vercel preview deployments, use this helper instead of hardcoding URLs:
+
+```ts
+// src/lib/auth/getBaseUrl.ts
+export function getBaseUrl() {
+  // Vercel preview/production deployments
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  // Explicit override
+  if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL
+  // Local development
+  return 'http://localhost:3000'
+}
+```
+
+This automatically handles:
+- **Local dev**: Uses `http://localhost:3000`
+- **Vercel preview**: Uses the auto-generated `*.vercel.app` URL
+- **Production**: Uses your custom domain (set `BETTER_AUTH_URL` in production env)
 
 ---
 
@@ -141,6 +163,9 @@ import {
 } from '@delmaredigital/payload-better-auth'
 import { betterAuthOptions } from './lib/auth/config'
 import { Users } from './collections/Users'
+import { getBaseUrl } from './lib/auth/getBaseUrl'
+
+const baseUrl = getBaseUrl()
 
 export default buildConfig({
   collections: [Users /* ...other collections */],
@@ -165,8 +190,9 @@ export default buildConfig({
               generateId: 'serial',
             },
           },
+          baseURL: baseUrl,
           secret: process.env.BETTER_AUTH_SECRET,
-          trustedOrigins: [process.env.NEXT_PUBLIC_APP_URL || ''],
+          trustedOrigins: [baseUrl],
         }),
     }),
   ],
@@ -190,17 +216,15 @@ export default buildConfig({
 import { createPayloadAuthClient } from '@delmaredigital/payload-better-auth/client'
 
 // Pre-configured with twoFactor, apiKey, and passkey plugins
+// Uses window.location.origin automatically - works on any deployment URL
 export const authClient = createPayloadAuthClient()
-
-// Or with custom baseURL:
-// export const authClient = createPayloadAuthClient({
-//   baseURL: process.env.NEXT_PUBLIC_APP_URL,
-// })
 
 export const { useSession, signIn, signUp, signOut, twoFactor, passkey } = authClient
 ```
 
-**Note:** `createPayloadAuthClient()` comes pre-configured with common plugins (twoFactor, apiKey, passkey). For full control, you can also use the raw `createAuthClient` from Better Auth:
+**Note:** `createPayloadAuthClient()` automatically uses `window.location.origin` as the base URL, so it works seamlessly across local dev, Vercel previews, and production without any configuration.
+
+For full control, you can also use the raw `createAuthClient` from Better Auth:
 
 ```ts
 import { createAuthClient } from '@delmaredigital/payload-better-auth/client'
