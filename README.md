@@ -401,7 +401,7 @@ API keys can have granular permission scopes. By default, scopes are auto-genera
 |--------|------|---------|-------------|
 | `scopes` | `Record<string, ScopeDefinition>` | - | Custom scope definitions |
 | `includeCollectionScopes` | `boolean` | `true` when no custom scopes, `false` when custom scopes provided | Include auto-generated collection scopes |
-| `excludeCollections` | `string[]` | `['sessions', 'verifications', 'accounts', 'twoFactors', 'apiKeys']` | Collections to exclude from auto-generated scopes |
+| `excludeCollections` | `string[]` | `['sessions', 'verifications', 'accounts', 'twoFactors', 'apikeys']` | Collections to exclude from auto-generated scopes |
 | `defaultScopes` | `string[]` | `[]` | Default scopes pre-selected when creating a key |
 
 **Zero Config (recommended):**
@@ -768,7 +768,7 @@ async function myEndpoint({ req }) {
 
 ```typescript
 requireScope('posts:read', {
-  apiKeysCollection: 'apiKeys',        // Collection slug (auto-detected)
+  apiKeysCollection: 'apikeys',        // Collection slug (auto-detected)
   allowAuthenticatedUsers: false,      // Also allow session auth
   extractApiKey: (req) => { ... },     // Custom extraction function
 })
@@ -799,7 +799,7 @@ The adapter uses Better Auth's `createAdapterFactory` which is **schema-aware** 
 | Email OTP | `better-auth` (core) | Uses verifications collection |
 | Password Reset | `better-auth` (core) | Uses verifications collection |
 | Two-Factor (TOTP) | `better-auth` (core) | Auto-generates twoFactors collection |
-| API Keys | `better-auth` (core) | Auto-generates apiKeys collection |
+| API Keys | `better-auth` (core) | Auto-generates apikeys collection |
 | Organizations | `better-auth` (core) | Auto-generates organizations, members, invitations |
 | Admin | `better-auth` (core) | Adds admin fields to users |
 | Passkey | Bundled | Auto-generates passkeys collection |
@@ -867,8 +867,8 @@ export const Users: CollectionConfig = {
     {
       name: 'apiKeys',
       type: 'join',
-      collection: 'apiKeys', // Auto-generated collection
-      on: 'user', // The field in apiKeys that references users
+      collection: 'apikeys', // Auto-generated collection (lowercase)
+      on: 'user', // The field in apikeys that references users
     },
   ],
 }
@@ -1000,6 +1000,8 @@ When a Better Auth plugin creates a model with a foreign key (e.g., `userId`, `o
 
 The auto-generated collections create relationship fields like `user` (from `userId`), so your join's `on` property should match that field name.
 
+**Collection Slug Casing:** Collection slugs are derived from Better Auth's model names (pluralized). Some plugins use lowercase (`apikey` → `apikeys`, `passkey` → `passkeys`) while others use camelCase (`twoFactor` → `twoFactors`). Always check the actual slug in your Payload admin panel if unsure.
+
 ### Cascade Delete (Cleanup Orphaned Records)
 
 When a user is deleted, their related records (sessions, accounts, API keys, passkeys, etc.) become orphaned. Better Auth provides an `afterDelete` hook for cleanup:
@@ -1016,7 +1018,7 @@ export const auth = betterAuth({
       enabled: true,
       afterDelete: async (user) => {
         // Clean up all related records
-        const collections = ['sessions', 'accounts', 'apiKeys', 'passkeys', 'twoFactors']
+        const collections = ['sessions', 'accounts', 'apikeys', 'passkeys', 'twoFactors']
 
         for (const collection of collections) {
           try {
