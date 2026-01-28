@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-01-28
+
+### Fixed
+
+#### Package Exports Pointing to Source Files
+
+Fixed critical issue where the published package's `exports` field pointed to TypeScript source files (`src/`) instead of compiled JavaScript (`dist/`). This caused "Unknown module type" errors when using the package with Turbopack.
+
+The `publishConfig.exports` pattern does not work reliably with pnpm - the exports are not overwritten during publish. Changed to point `exports` directly to `dist/`.
+
+---
+
 ## [0.3.8] - 2026-01-28
 
 ### Fixed
