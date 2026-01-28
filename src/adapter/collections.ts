@@ -8,6 +8,7 @@ import type { Config, CollectionConfig, Field, Plugin, CollectionBeforeChangeHoo
 import type { BetterAuthOptions } from 'better-auth'
 import { getAuthTables } from 'better-auth/db'
 import type { FirstUserAdminOptions } from '../utils/firstUserAdmin.js'
+import { isAdmin } from '../utils/access.js'
 
 export type { FirstUserAdminOptions }
 
@@ -343,10 +344,10 @@ function generateCollection(
   // Default access: admin-only read/delete, disabled manual create/update via admin UI
   // The adapter uses overrideAccess: true for programmatic operations from Better Auth
   const defaultAccess: CollectionConfig['access'] = {
-    read: ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin',
+    read: isAdmin(),
     create: () => false, // Manual creation disabled - Better Auth manages these
     update: () => false, // Manual update disabled - Better Auth manages these
-    delete: ({ req }) => (req.user as { role?: string } | undefined)?.role === 'admin',
+    delete: isAdmin(),
   }
 
   return {

@@ -367,11 +367,22 @@ betterAuthCollections({
 | `betterAuthOptions` | `BetterAuthOptions` | Your Better Auth options |
 | `skipCollections` | `string[]` | Collections to skip generating (default: `['user']`) |
 | `adminGroup` | `string` | Admin panel group name (default: `'Auth'`) |
-| `access` | `CollectionConfig['access']` | Custom access control for generated collections |
+| `access` | `CollectionConfig['access']` | Custom access control for generated collections. **Note**: Replaces default access entirely (see caution below). |
 | `usePlural` | `boolean` | Pluralize collection slugs (default: `true`) |
 | `configureSaveToJWT` | `boolean` | Auto-configure `saveToJWT` for session-critical fields (default: `true`) |
 | `firstUserAdmin` | `boolean \| FirstUserAdminOptions` | Make first registered user an admin (default: `true`) |
 | `customizeCollection` | `(modelKey, collection) => CollectionConfig` | Customize generated collections |
+
+> **⚠️ Caution on Custom Access:**
+> When providing the `access` option, it **completely replaces** the default access object for all auto-generated collections. It does not merge with or override individual properties.
+>
+> By default, the plugin sets:
+> - `read`: `isAdmin()`
+> - `delete`: `isAdmin()`
+> - `create`: `() => false` (Manual creation disabled - Better Auth manages these)
+> - `update`: `() => false` (Manual update disabled - Better Auth manages these)
+> 
+> You must explicitly handle all access types to ensure your collections remain secure and functional.
 
 **First User Admin:**
 
