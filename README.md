@@ -23,6 +23,7 @@ Better Auth adapter and plugins for Payload CMS. Enables seamless integration be
 - [Access Control Helpers](#access-control-helpers)
 - [API Key Scope Enforcement](#api-key-scope-enforcement)
 - [Plugin Compatibility](#plugin-compatibility)
+- [Recipes](#recipes)
 - [Types](#types)
 - [License](#license)
 
@@ -1588,6 +1589,130 @@ createBetterAuthPlugin({
 ```
 
 **Note:** Sessions are managed via Payload's default collection view at `/admin/collections/sessions`.
+
+---
+
+## Recipes
+
+Common patterns and solutions for Better Auth integration.
+
+### Auto-Create Organization on User Signup
+
+A common pattern is to automatically create a personal workspace/organization when a user signs up (and verifies their email). The key is to use Better Auth's organization API (`auth.api.createOrganization()`) rather than raw adapter calls, so that `organizationHooks` fire properly.
+
+**The Challenge:** Database hooks are defined in `betterAuthOptions` before the `auth` instance exists, so you can't directly reference `auth.api` in your hooks.
+
+**The Solution:** Use a lazy auth instance singleton:
+
+**Step 1: Create an auth instance singleton**
+
+```typescript
+// src/lib/auth/instance.ts
+import type { betterAuth } from 'better-auth'
+
+type AuthInstance = ReturnType<typeof betterAuth>
+
+let authInstance: AuthInstance | null = null
+
+export function setAuthInstance(auth: AuthInstance): void {
+  authInstance = auth
+}
+
+export function getAuthInstance(): AuthInstance {
+  if (!authInstance) {
+    throw new Error('Auth not initialized')
+  }
+  return authInstance
+}
+```
+
+**Step 2: Store the instance after creation**
+
+```typescript
+// src/payload.config.ts (or wherever you configure plugins)
+import { setAuthInstance } from '@/lib/auth/instance'
+
+createBetterAuthPlugin({
+  createAuth: (payload) => {
+    const auth = betterAuth({
+      ...betterAuthOptions,
+      database: payloadAdapter({ payloadClient: payload }),
+      // ... other options
+    })
+
+    // Store for use in database hooks
+    setAuthInstance(auth)
+
+    return auth
+  },
+})
+```
+
+**Step 3: Use the organization API in database hooks**
+
+```typescript
+// src/lib/auth/config.ts
+import { getAuthInstance } from './instance'
+
+export const betterAuthOptions: Partial<BetterAuthOptions> = {
+  // ... other options
+
+  plugins: [
+    organization({
+      // organizationHooks fire when using auth.api.createOrganization()
+      organizationHooks: {
+        afterCreateOrganization: async ({ organization }) => {
+          // This runs for ALL org creations - auto-created, manual, API
+          console.log(`Organization ${organization.id} created`)
+          // Create related records, send welcome email, etc.
+        },
+      },
+    }),
+  ],
+
+  databaseHooks: {
+    user: {
+      update: {
+        after: async (user, ctx) => {
+          // Only proceed if user just verified their email
+          if (!user.emailVerified) return
+
+          // Check if user already has an organization (e.g., joined via invitation)
+          const existingMembership = await ctx?.context?.adapter?.findOne({
+            model: 'member',
+            where: [{ field: 'userId', value: user.id }],
+          })
+          if (existingMembership) return
+
+          // Create organization using the proper API
+          // This ensures organizationHooks.afterCreateOrganization fires
+          const auth = getAuthInstance()
+          await auth.api.createOrganization({
+            body: {
+              name: `${user.name}'s Workspace`,
+              slug: generateUniqueSlug(user.name),
+              userId: user.id,
+            },
+          })
+        },
+      },
+    },
+  },
+}
+```
+
+**Why This Matters:**
+
+| Approach | organizationHooks fire? | Recommended? |
+|----------|------------------------|--------------|
+| `auth.api.createOrganization()` | ✅ Yes | ✅ Yes |
+| `ctx.context.adapter.create({ model: 'organization' })` | ❌ No | ❌ No |
+
+Using the raw adapter bypasses Better Auth's organization plugin entirely. Any logic in `organizationHooks` (like creating related records, sending notifications, or syncing with external systems) won't run.
+
+**Handling Invitations:**
+
+Users who join via invitation already have a membership record (created when they accept the invitation), so the `existingMembership` check prevents creating a duplicate personal organization for them.
 
 ---
 
