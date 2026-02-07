@@ -203,6 +203,14 @@ export async function getApiKeyInfo(
       }
     }
 
+    // Prefer scope names from metadata (stored by admin UI as original scope strings
+    // like ["pages:read", "*"]) over permissions-derived scopes, because the permissions
+    // field uses Better Auth's internal format (e.g. {"pages": {"$": ["read"]}}) and
+    // Object.keys() on that only yields collection names, not proper scope strings.
+    if (metadata?.scopes && Array.isArray(metadata.scopes)) {
+      scopes = metadata.scopes as string[]
+    }
+
     return {
       id: String(doc.id),
       userId,
