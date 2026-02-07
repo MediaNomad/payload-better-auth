@@ -1,0 +1,65 @@
+'use client';
+import { jsx as _jsx } from "react/jsx-runtime";
+import { useState } from 'react';
+import { createPayloadAuthClient } from '../exports/client.js';
+/**
+ * Standalone passkey registration button component.
+ * Handles the WebAuthn registration flow with Better Auth.
+ *
+ * @example
+ * ```tsx
+ * import { PasskeyRegisterButton } from '@delmaredigital/payload-better-auth/components'
+ *
+ * function SecuritySettings() {
+ *   return (
+ *     <PasskeyRegisterButton
+ *       passkeyName="My MacBook"
+ *       onSuccess={(passkey) => {
+ *         console.log('Passkey registered:', passkey.id)
+ *         refetchPasskeys()
+ *       }}
+ *       onError={(error) => {
+ *         setError(error)
+ *       }}
+ *     />
+ *   )
+ * }
+ * ```
+ */ export function PasskeyRegisterButton({ authClient: providedClient, passkeyName, onSuccess, onError, label = 'Add Passkey', loadingLabel = 'Registering...', disabled, children, ...buttonProps }) {
+    const [loading, setLoading] = useState(false);
+    async function handleClick() {
+        setLoading(true);
+        try {
+            const client = providedClient ?? createPayloadAuthClient();
+            const result = await client.passkey.addPasskey({
+                name: passkeyName
+            });
+            if (result.error) {
+                onError?.(result.error.message ?? 'Passkey registration failed');
+            } else if (result.data) {
+                onSuccess?.({
+                    id: result.data.id,
+                    name: passkeyName
+                });
+            }
+        } catch (err) {
+            if (err instanceof Error && err.name === 'NotAllowedError') {
+                onError?.('Passkey registration was cancelled or not allowed');
+            } else if (err instanceof Error && err.name === 'InvalidStateError') {
+                onError?.('This passkey is already registered');
+            } else {
+                onError?.(err instanceof Error ? err.message : 'Passkey registration failed');
+            }
+        } finally{
+            setLoading(false);
+        }
+    }
+    return /*#__PURE__*/ _jsx("button", {
+        type: "button",
+        onClick: handleClick,
+        disabled: disabled || loading,
+        ...buttonProps,
+        children: children ?? (loading ? loadingLabel : label)
+    });
+}
+export default PasskeyRegisterButton;
